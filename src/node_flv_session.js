@@ -81,24 +81,30 @@ class NodeFlvSession {
     }
   }
 
-  stop() {
-    if (this.isStarting) {
-      this.isStarting = false;
-      let publisherId = context.publishers.get(this.playStreamPath);
-      if (publisherId != null) {
-        context.sessions.get(publisherId).players.delete(this.id);
-        context.nodeEvent.emit('donePlay', this.id, this.playStreamPath, this.playArgs);
-      }
-      Logger.log(`[${this.TAG} play] Close stream. id=${this.id} streamPath=${this.playStreamPath}`);
-      Logger.log(`[${this.TAG} disconnect] id=${this.id}`);
+stop() {
+  if (this.isStarting && this.res) { // Add check for this.res
+    this.isStarting = false;
+    let publisherId = context.publishers.get(this.playStreamPath);
+    if (publisherId != null) {
+      context.sessions.get(publisherId).players.delete(this.id);
+      context.nodeEvent.emit('donePlay', this.id, this.playStreamPath, this.playArgs);
+    }
+    Logger.log(`[${this.TAG} play] Close stream. id=${this.id} streamPath=${this.playStreamPath}`);
+    Logger.log(`[${this.TAG} disconnect] id=${this.id}`);
+    
+    // Check if this.res.socket is defined before accessing its properties
+    if (this.res.socket) {
       this.connectCmdObj.bytesWritten = this.res.socket.bytesWritten;
       this.connectCmdObj.bytesRead = this.res.socket.bytesRead;
-      context.nodeEvent.emit('doneConnect', this.id, this.connectCmdObj);
-      this.res.end();
-      context.idlePlayers.delete(this.id);
-      context.sessions.delete(this.id);
     }
+    
+    context.nodeEvent.emit('doneConnect', this.id, this.connectCmdObj);
+    this.res.end();
+    context.idlePlayers.delete(this.id);
+    context.sessions.delete(this.id);
   }
+}
+
 
   onReqClose() {
     this.stop();
